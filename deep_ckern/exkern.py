@@ -1,11 +1,11 @@
-from gpflow.params import Parameterized
 import tensorflow as tf
 import numpy as np
+import gpflow
 
 __all__ = ['ElementwiseExKern', 'ExReLU', 'ExErf']
 
 
-class ElementwiseExKern(Parameterized):
+class ElementwiseExKern(gpflow.kernels.Kernel):
     def K(self, cov, var1, var2=None):
         raise NotImplementedError
 

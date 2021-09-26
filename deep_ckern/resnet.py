@@ -59,7 +59,6 @@ def conv2d_fixed_padding(inputs, var, kernel_size, strides,
 
 class ResnetKernel(DeepKernelBase):
     "Kernel equivalent to Resnet V2 (tensorflow/models/official/resnet)"
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def headless_network(self, inputs, apply_recurse_kern):
         """
@@ -88,7 +87,6 @@ class ResnetKernel(DeepKernelBase):
         inputs = tf.reduce_mean(inputs, axis=(1, 2, 3))
         return self.var_bias + self.var_weight * inputs
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def block_v2(self, inputs, projection_shortcut, strides, apply_recurse_kern):
         shortcut = inputs

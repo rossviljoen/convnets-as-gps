@@ -1,5 +1,4 @@
 import gpflow
-from gpflow.params import Parameter, Parameterized, DataHolder, Minibatch
 import tensorflow as tf
 import numpy as np
 from typing import List
@@ -61,10 +60,9 @@ class DeepKernel(gpflow.kernels.Kernel):
                               "{} vs {}").format(
                                   len(self.strides), self.n_layers))
 
-        self.var_weight = Parameter(var_weight, gpflow.transforms.positive)
-        self.var_bias = Parameter(var_bias, gpflow.transforms.positive)
+        self.var_weight = Parameter(var_weight, gpflow.utilities.positive)
+        self.var_bias = Parameter(var_bias, gpflow.utilities.positive)
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def K(self, X, X2=None):
         # Concatenate the covariance between X and X2 and their respective
@@ -116,7 +114,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         var_z_cross_last = tf.reduce_mean(var_z_cross, axis=2)
         return self.var_bias + self.var_weight * var_z_cross_last
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def Kdiag(self, X):
         X_sq = tf.reshape(tf.square(X), [-1] + self.input_shape)
@@ -129,7 +126,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         var_z_last = tf.reduce_mean(var_z, axis=all_except_first)
         return self.var_bias + self.var_weight * var_z_last
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def lin_step(self, i, x):
         if len(x.shape) == 2:
@@ -147,7 +143,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         return a + self.var_bias
 
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def get_Wb(self, i, X_shape=None, n_samples=None, n_filters=None):
         "Unlike the kernel, this operates in NHWC"
@@ -195,7 +190,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         return tf.reshape(X, [batch, -1]) @ Ws[-1] + bs[-1]
 
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def equivalent_BNN(self, X, n_samples, n_filters=128):
         if list(map(int, X.shape)) != [1] + self.input_shape:
@@ -292,15 +286,14 @@ class ConvNet(gpflow.models.Model):
             b_var = kern.var_bias.read_value()
             W_init = np.sqrt(W_var) * np.random.randn(*W_shape)
             b_init = np.sqrt(b_var) * np.random.randn(*b_shape)
-            Ws.append(gpflow.params.Parameter(W_init, dtype=gpflow.default_float())) #, prior=ZeroMeanGauss(W_var)))
-            bs.append(gpflow.params.Parameter(b_init, dtype=gpflow.default_float())) #, prior=ZeroMeanGauss(b_var)))
-        self.Ws = gpflow.params.ParamList(Ws)
-        self.bs = gpflow.params.ParamList(bs)
+            Ws.append(gpflow.Parameter(W_init, dtype=gpflow.default_float())) #, prior=ZeroMeanGauss(W_var)))
+            bs.append(gpflow.Parameter(b_init, dtype=gpflow.default_float())) #, prior=ZeroMeanGauss(b_var)))
+        self.Ws = gpflow.ParamList(Ws)
+        self.bs = gpflow.ParamList(bs)
 
     def _build_objective(self, likelihood_tensor, prior_tensor):
         return self.scale_factor * likelihood_tensor - prior_tensor  # likelihood_tensor is already a loss
 
-    @gpflow.decors.params_as_tensors
     def _build_likelihood(self):
         # Get around fast_1sample_equivalent_BNN not getting tensors from param
         Ws_tensors = list(self.Ws[i] for i in range(len(self.Ws)))
@@ -314,7 +307,6 @@ class ConvNet(gpflow.models.Model):
     def predict_y(self, Xnew):
         return self._build_predict_y(Xnew), tf.constant(0.0, dtype=gpflow.default_float())
 
-    @gpflow.decors.params_as_tensors
     def _build_predict_y(self, Xnew):
         Ws_tensors = list(self.Ws[i] for i in range(len(self.Ws)))
         bs_tensors = list(self.bs[i] for i in range(len(self.bs)))

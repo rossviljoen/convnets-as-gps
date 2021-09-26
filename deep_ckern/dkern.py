@@ -4,9 +4,7 @@ import numpy as np
 import tensorflow as tf
 import abc
 
-
 from .exkern import ElementwiseExKern
-
 
 class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
     "General kernel for deep networks"
@@ -37,12 +35,11 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
             input_type = gpflow.default_float()
         self.input_type = input_type
 
-        self.var_weight = gpflow.params.Parameter(
-            var_weight, gpflow.transforms.positive, dtype=self.input_type)
-        self.var_bias = gpflow.params.Parameter(
-            var_bias, gpflow.transforms.positive, dtype=self.input_type)
+        self.var_weight = gpflow.Parameter(
+            var_weight, gpflow.utilities.positive, dtype=self.input_type)
+        self.var_bias = gpflow.Parameter(
+            var_bias, gpflow.utilities.positive, dtype=self.input_type)
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def K(self, X, X2=None):
         # Concatenate the covariance between X and X2 and their respective
@@ -106,7 +103,6 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
             return tf.cast(result, gpflow.default_float(), name="cast_result")
         return result
 
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def Kdiag(self, X):
         if X.dtype != self.input_type:
@@ -140,7 +136,6 @@ class DeepKernelTesting(DeepKernelBase):
     """
     Reimplement original DeepKernel to test ResNet
     """
-    @gpflow.decors.params_as_tensors
     @gpflow.decors.name_scope()
     def headless_network(self, inputs, apply_recurse_kern):
         in_chans = int(inputs.shape[self.data_format.index("C")])
