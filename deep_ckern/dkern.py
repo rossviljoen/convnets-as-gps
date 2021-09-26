@@ -1,9 +1,9 @@
 import gpflow
-from gpflow import settings
 from typing import List
 import numpy as np
 import tensorflow as tf
 import abc
+
 
 from .exkern import ElementwiseExKern
 
@@ -34,7 +34,7 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
         self.conv_stride = conv_stride
         self.data_format = data_format
         if input_type is None:
-            input_type = settings.float_type
+            input_type = gpflow.default_float()
         self.input_type = input_type
 
         self.var_weight = gpflow.params.Parameter(
@@ -100,10 +100,10 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
         var_z_cross = tf.reshape(var_z_list[-1], [N, N2, -1])
         var_z_cross_last = tf.reduce_mean(var_z_cross, axis=2)
         result = self.var_bias + self.var_weight * var_z_cross_last
-        if self.input_type != settings.float_type:
+        if self.input_type != gpflow.default_float():
             print("Casting kernel from {} to {}"
-                  .format(self.input_type, settings.float_type))
-            return tf.cast(result, settings.float_type, name="cast_result")
+                  .format(self.input_type, gpflow.default_float()))
+            return tf.cast(result, gpflow.default_float(), name="cast_result")
         return result
 
     @gpflow.decors.params_as_tensors
@@ -121,10 +121,10 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
         all_except_first = np.arange(1, len(inputs.shape))
         var_z_last = tf.reduce_mean(inputs, axis=all_except_first)
         result = self.var_bias + self.var_weight * var_z_last
-        if self.input_type != settings.float_type:
+        if self.input_type != gpflow.default_float():
             print("Casting kernel from {} to {}"
-                  .format(self.input_type, settings.float_type))
-            return tf.cast(result, settings.float_type, name="cast_result")
+                  .format(self.input_type, gpflow.default_float()))
+            return tf.cast(result, gpflow.default_float(), name="cast_result")
         return result
 
     @abc.abstractmethod

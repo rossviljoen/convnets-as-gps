@@ -4,7 +4,6 @@ disk
 """
 import numpy as np
 import tensorflow as tf
-from gpflow import settings
 import deep_ckern as dkern
 import tqdm
 import pickle_utils as pu
@@ -18,7 +17,7 @@ def mnist_1hot_all():
     old_v = tf.logging.get_verbosity()
     tf.logging.set_verbosity(tf.logging.ERROR)
     d = input_data.read_data_sets("MNIST_data/", one_hot=True)
-    r = tuple(a.astype(settings.float_type) for a in [
+    r = tuple(a.astype(gpflow.default_float()) for a in [
         d.train.images, d.train.labels,
         d.validation.images, d.validation.labels,
         d.test.images, d.test.labels])
@@ -70,11 +69,11 @@ def compute_big_Kdiag(sess, kern, n_max, X, n_gpus=1):
     K_ops = []
     for i in range(n_gpus):
         with tf.device("gpu:{}".format(i)):
-            X_ph = tf.placeholder(settings.float_type, [None, X.shape[1]], "X_ph")
+            X_ph = tf.placeholder(gpflow.default_float(), [None, X.shape[1]], "X_ph")
             Kdiag = kern.Kdiag(X_ph)
             K_ops.append((X_ph, Kdiag))
 
-    out = np.zeros([N], dtype=settings.float_type)
+    out = np.zeros([N], dtype=gpflow.default_float())
     for j in tqdm.trange(0, len(slices), n_gpus):
         feed_dict = {}
         ops = []
@@ -111,8 +110,8 @@ def compute_big_K(sess, kern, n_max, X, X2=None, n_gpus=1):
     K_ops = []
     for i in range(n_gpus):
         with tf.device("gpu:{}".format(i)):
-            X_ph = tf.placeholder(settings.float_type, [None, X.shape[1]], "X_ph")
-            X2_ph = tf.placeholder(settings.float_type, X_ph.shape, "X2_ph")
+            X_ph = tf.placeholder(gpflow.default_float(), [None, X.shape[1]], "X_ph")
+            X2_ph = tf.placeholder(gpflow.default_float(), X_ph.shape, "X2_ph")
             K_cross = kern.K(X_ph, X2_ph)
             if diag_symm:
                 K_symm = kern.K(X_ph, None)
@@ -121,7 +120,7 @@ def compute_big_K(sess, kern, n_max, X, X2=None, n_gpus=1):
             K_ops.append((X_ph, X2_ph, K_cross, K_symm))
 
     # Execute on all GPUs concurrently
-    out = np.zeros((N, N2), dtype=settings.float_type)
+    out = np.zeros((N, N2), dtype=gpflow.default_float())
     for j in tqdm.trange(0, len(slices), n_gpus):
         feed_dict = {}
         ops = []

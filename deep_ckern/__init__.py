@@ -1,5 +1,4 @@
 import gpflow
-from gpflow import settings
 from gpflow.params import Parameter, Parameterized, DataHolder, Minibatch
 import tensorflow as tf
 import numpy as np
@@ -178,9 +177,9 @@ class DeepKernel(gpflow.kernels.Kernel):
             std_W = tf.sqrt(self.var_weight / fan_in)
 
         self._W[i] = tf.random_normal(shape_W, stddev=std_W,
-                                      name="W_{}".format(i), dtype=settings.float_type)
+                                      name="W_{}".format(i), dtype=gpflow.default_float())
         self._b[i] = tf.random_normal(shape_b, stddev=std_b,
-                                      name="b_{}".format(i), dtype=settings.float_type)
+                                      name="b_{}".format(i), dtype=gpflow.default_float())
         return self._W[i], self._b[i]
 
 
@@ -252,7 +251,7 @@ class ZeroMeanGauss(gpflow.priors.Gaussian):
 
     def logp(self, x):
         c = np.log(2*np.pi) + np.log(self.var)
-        return -.5 * (c*tf.cast(tf.size(x), settings.float_type)
+        return -.5 * (c*tf.cast(tf.size(x), gpflow.default_float())
                       + tf.reduce_sum(tf.square(x)/self.var))
 
 
@@ -264,7 +263,7 @@ class ConvNet(gpflow.models.Model):
             # Create W_ and b_ as attributes in kernel
             X_zeros = np.zeros([1] + kern.input_shape)
             _ = kern.equivalent_BNN(
-                X=tf.constant(X_zeros, dtype=settings.float_type),
+                X=tf.constant(X_zeros, dtype=gpflow.default_float()),
                 n_samples=1,
                 n_filters=n_filters)
         self._kern = kern
@@ -293,8 +292,8 @@ class ConvNet(gpflow.models.Model):
             b_var = kern.var_bias.read_value()
             W_init = np.sqrt(W_var) * np.random.randn(*W_shape)
             b_init = np.sqrt(b_var) * np.random.randn(*b_shape)
-            Ws.append(gpflow.params.Parameter(W_init, dtype=settings.float_type)) #, prior=ZeroMeanGauss(W_var)))
-            bs.append(gpflow.params.Parameter(b_init, dtype=settings.float_type)) #, prior=ZeroMeanGauss(b_var)))
+            Ws.append(gpflow.params.Parameter(W_init, dtype=gpflow.default_float())) #, prior=ZeroMeanGauss(W_var)))
+            bs.append(gpflow.params.Parameter(b_init, dtype=gpflow.default_float())) #, prior=ZeroMeanGauss(b_var)))
         self.Ws = gpflow.params.ParamList(Ws)
         self.bs = gpflow.params.ParamList(bs)
 
@@ -311,9 +310,9 @@ class ConvNet(gpflow.models.Model):
             Ws=Ws_tensors, bs=bs_tensors)
         return tf.losses.sparse_softmax_cross_entropy(labels=self.Y, logits=logits)
 
-    @gpflow.decors.autoflow((settings.float_type, [None, None]))
+    @gpflow.decors.autoflow((gpflow.default_float(), [None, None]))
     def predict_y(self, Xnew):
-        return self._build_predict_y(Xnew), tf.constant(0.0, dtype=settings.float_type)
+        return self._build_predict_y(Xnew), tf.constant(0.0, dtype=gpflow.default_float())
 
     @gpflow.decors.params_as_tensors
     def _build_predict_y(self, Xnew):
