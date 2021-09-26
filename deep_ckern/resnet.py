@@ -30,30 +30,29 @@ def fixed_padding(inputs, kernel_size, data_format):
                                         [pad_beg, pad_end], [0, 0]])
     return padded_inputs
 
-
+@tf.function
 def conv2d_fixed_padding(inputs, var, kernel_size, strides,
                          data_format, name='conv2d_fixed_padding'):
     """Strided 2-D convolution with explicit padding."""
     # The padding is consistent and is based only on `kernel_size`, not on the
     # dimensions of `inputs` (as opposed to using `tf.layers.conv2d` alone).
-    with tf.name_scope(name):
-        if strides > 1:
-            inputs = fixed_padding(inputs, kernel_size, data_format)
-        chan_idx = data_format.index("C")
-        try:
-            C = int(inputs.shape[chan_idx])
-        except TypeError:
-            C = tf.shape(inputs)[chan_idx]
-        fan_in = C * (kernel_size * kernel_size)
-        W = tf.fill([kernel_size, kernel_size, C, 1], var/fan_in)
-        if data_format == "NCHW":
-            strides_shape = [1, 1, strides, strides]
-        else:
-            strides_shape = [1, strides, strides, 1]
-        return tf.nn.conv2d(
-            input=inputs, filter=W, strides=strides_shape,
-            padding=('SAME' if strides == 1 else 'VALID'),
-            data_format=data_format)
+    if strides > 1:
+        inputs = fixed_padding(inputs, kernel_size, data_format)
+    chan_idx = data_format.index("C")
+    try:
+        C = int(inputs.shape[chan_idx])
+    except TypeError:
+        C = tf.shape(inputs)[chan_idx]
+    fan_in = C * (kernel_size * kernel_size)
+    W = tf.fill([kernel_size, kernel_size, C, 1], var/fan_in)
+    if data_format == "NCHW":
+        strides_shape = [1, 1, strides, strides]
+    else:
+        strides_shape = [1, strides, strides, 1]
+    return tf.nn.conv2d(
+        input=inputs, filter=W, strides=strides_shape,
+        padding=('SAME' if strides == 1 else 'VALID'),
+        data_format=data_format)
 
 
 class ResnetKernel(DeepKernelBase):

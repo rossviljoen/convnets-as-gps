@@ -22,7 +22,7 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
                  input_type = None,
                  name: str = None):
         input_dim = np.prod(input_shape)
-        super(DeepKernelBase, self).__init__(input_dim, active_dims, name=name)
+        super().__init__(input_dim, active_dims)
 
         self.input_shape = list(np.copy(input_shape))
         self.block_sizes = np.copy(block_sizes).astype(np.int32)

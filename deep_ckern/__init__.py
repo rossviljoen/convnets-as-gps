@@ -26,7 +26,7 @@ class DeepKernel(gpflow.kernels.Kernel):
                  skip_freq: int = -1,
                  name: str = None):
         input_dim = np.prod(input_shape)
-        super(DeepKernel, self).__init__(input_dim, active_dims, name=name)
+        super().__init__(input_dim, active_dims)
 
         self.filter_sizes = np.copy(filter_sizes).astype(np.int32)
         self.n_layers = len(filter_sizes)
@@ -60,8 +60,8 @@ class DeepKernel(gpflow.kernels.Kernel):
                               "{} vs {}").format(
                                   len(self.strides), self.n_layers))
 
-        self.var_weight = Parameter(var_weight, gpflow.utilities.positive)
-        self.var_bias = Parameter(var_bias, gpflow.utilities.positive)
+        self.var_weight = gpflow.Parameter(var_weight, transform=gpflow.utilities.positive())
+        self.var_bias = gpflow.Parameter(var_bias, transform=gpflow.utilities.positive())
 
     def K(self, X, X2=None):
         # Concatenate the covariance between X and X2 and their respective
@@ -100,25 +100,25 @@ class DeepKernel(gpflow.kernels.Kernel):
             var_a_cross = var_a_all[cross_start:]
             if X2 is None:
                 var_a_1 = var_a_all[:N]
-                var_z_list = [self.recurse_kern.Kdiag(var_a_1),
+                var_z_list = [self.recurse_kern.K_diag(var_a_1),
                               self.recurse_kern.K(var_a_cross, var_a_1, None)]
             else:
                 var_a_1 = var_a_all[:N]
                 var_a_2 = var_a_all[N:cross_start]
-                var_z_list = [self.recurse_kern.Kdiag(var_a_1),
-                              self.recurse_kern.Kdiag(var_a_2),
+                var_z_list = [self.recurse_kern.K_diag(var_a_1),
+                              self.recurse_kern.K_diag(var_a_2),
                               self.recurse_kern.K(var_a_cross, var_a_1, var_a_2)]
         # The final layer
         var_z_cross = tf.reshape(var_z_list[-1], [N, N2, -1])
         var_z_cross_last = tf.reduce_mean(var_z_cross, axis=2)
         return self.var_bias + self.var_weight * var_z_cross_last
 
-    def Kdiag(self, X):
+    def K_diag(self, X):
         X_sq = tf.reshape(tf.square(X), [-1] + self.input_shape)
         var_z = tf.reduce_mean(X_sq, axis=1, keepdims=True)
         for i in range(self.n_layers):
             var_a = self.lin_step(i, var_z)
-            var_z = self.recurse_kern.Kdiag(var_a)
+            var_z = self.recurse_kern.K_diag(var_a)
 
         all_except_first = np.arange(1, len(var_z.shape))
         var_z_last = tf.reduce_mean(var_z, axis=all_except_first)
@@ -232,19 +232,19 @@ class DeepKernel(gpflow.kernels.Kernel):
 
 
 
-class ZeroMeanGauss(gpflow.priors.Gaussian):
-    def __init__(self, var):
-        gpflow.priors.Prior.__init__(self)
-        self.mu = 0.0
-        self.var = var
+# class ZeroMeanGauss(gpflow.priors.Gaussian):
+#     def __init__(self, var):
+#         gpflow.priors.Prior.__init__(self)
+#         self.mu = 0.0
+#         self.var = var
 
-    def logp(self, x):
-        c = np.log(2*np.pi) + np.log(self.var)
-        return -.5 * (c*tf.cast(tf.size(x), gpflow.default_float())
-                      + tf.reduce_sum(tf.square(x)/self.var))
+#     def logp(self, x):
+#         c = np.log(2*np.pi) + np.log(self.var)
+#         return -.5 * (c*tf.cast(tf.size(x), gpflow.default_float())
+#                       + tf.reduce_sum(tf.square(x)/self.var))
 
 
-class ConvNet(gpflow.models.Model):
+class ConvNet(gpflow.models.BayesianModel):
     "L2-regularised ConvNet as a Model"
     def __init__(self, X, Y, kern, minibatch_size=None, n_filters=256, name: str = None):
         super(ConvNet, self).__init__(name=name)

@@ -6,10 +6,10 @@ __all__ = ['ElementwiseExKern', 'ExReLU', 'ExErf']
 
 
 class ElementwiseExKern(gpflow.kernels.Kernel):
-    def K(self, cov, var1, var2=None):
-        raise NotImplementedError
+    # def K(self, cov, var1, var2=None):
+    #     raise NotImplementedError
 
-    def Kdiag(self, var):
+    def K_diag(self, var):
         raise NotImplementedError
 
     def nlin(self, x):
@@ -22,7 +22,7 @@ class ElementwiseExKern(gpflow.kernels.Kernel):
 
 class ExReLU(ElementwiseExKern):
     def __init__(self, exponent=1, multiply_by_sqrt2=False, name=None):
-        super(ExReLU, self).__init__(name=name)
+        super().__init__(name=name)
         self.multiply_by_sqrt2 = multiply_by_sqrt2
         if exponent in {0, 1}:
             self.exponent = exponent
@@ -52,7 +52,7 @@ class ExReLU(ElementwiseExKern):
             div = 2*np.pi
         return norms_prod / div * J
 
-    def Kdiag(self, var):
+    def K_diag(self, var):
         if self.multiply_by_sqrt2:
             if self.exponent == 0:
                 return tf.ones_like(var)
@@ -89,7 +89,7 @@ class ExErf(ElementwiseExKern):
         sin_theta = 2*cov / tf.sqrt(vs)
         return (2/np.pi) * tf.asin(sin_theta)
 
-    def Kdiag(self, var):
+    def K_diag(self, var):
         v2 = 2*var
         return (2/np.pi) * tf.asin(v2 / (1 + v2))
 
