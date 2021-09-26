@@ -6,7 +6,6 @@ from .dkern import DeepKernelBase
 __all__ = ['ResnetKernel']
 
 
-@gpflow.decors.name_scope()
 def fixed_padding(inputs, kernel_size, data_format):
     """Pads the input along the spatial dimensions independently of input size.
 
@@ -59,7 +58,6 @@ def conv2d_fixed_padding(inputs, var, kernel_size, strides,
 
 class ResnetKernel(DeepKernelBase):
     "Kernel equivalent to Resnet V2 (tensorflow/models/official/resnet)"
-    @gpflow.decors.name_scope()
     def headless_network(self, inputs, apply_recurse_kern):
         """
         Apply the network that this kernel defines, except the last dense layer.
@@ -87,7 +85,6 @@ class ResnetKernel(DeepKernelBase):
         inputs = tf.reduce_mean(inputs, axis=(1, 2, 3))
         return self.var_bias + self.var_weight * inputs
 
-    @gpflow.decors.name_scope()
     def block_v2(self, inputs, projection_shortcut, strides, apply_recurse_kern):
         shortcut = inputs
         inputs = apply_recurse_kern(inputs)

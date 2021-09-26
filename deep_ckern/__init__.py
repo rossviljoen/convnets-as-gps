@@ -63,7 +63,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         self.var_weight = Parameter(var_weight, gpflow.utilities.positive)
         self.var_bias = Parameter(var_bias, gpflow.utilities.positive)
 
-    @gpflow.decors.name_scope()
     def K(self, X, X2=None):
         # Concatenate the covariance between X and X2 and their respective
         # variances. Only 1 variance is needed if X2 is None.
@@ -114,7 +113,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         var_z_cross_last = tf.reduce_mean(var_z_cross, axis=2)
         return self.var_bias + self.var_weight * var_z_cross_last
 
-    @gpflow.decors.name_scope()
     def Kdiag(self, X):
         X_sq = tf.reshape(tf.square(X), [-1] + self.input_shape)
         var_z = tf.reduce_mean(X_sq, axis=1, keepdims=True)
@@ -126,7 +124,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         var_z_last = tf.reduce_mean(var_z, axis=all_except_first)
         return self.var_bias + self.var_weight * var_z_last
 
-    @gpflow.decors.name_scope()
     def lin_step(self, i, x):
         if len(x.shape) == 2:
             a = self.var_weight * x
@@ -143,7 +140,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         return a + self.var_bias
 
 
-    @gpflow.decors.name_scope()
     def get_Wb(self, i, X_shape=None, n_samples=None, n_filters=None):
         "Unlike the kernel, this operates in NHWC"
         try:
@@ -190,7 +186,6 @@ class DeepKernel(gpflow.kernels.Kernel):
         return tf.reshape(X, [batch, -1]) @ Ws[-1] + bs[-1]
 
 
-    @gpflow.decors.name_scope()
     def equivalent_BNN(self, X, n_samples, n_filters=128):
         if list(map(int, X.shape)) != [1] + self.input_shape:
             raise NotImplementedError("Can only deal with 1 input image")
@@ -303,7 +298,6 @@ class ConvNet(gpflow.models.Model):
             Ws=Ws_tensors, bs=bs_tensors)
         return tf.losses.sparse_softmax_cross_entropy(labels=self.Y, logits=logits)
 
-    @gpflow.decors.autoflow((gpflow.default_float(), [None, None]))
     def predict_y(self, Xnew):
         return self._build_predict_y(Xnew), tf.constant(0.0, dtype=gpflow.default_float())
 

@@ -40,7 +40,6 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
         self.var_bias = gpflow.Parameter(
             var_bias, gpflow.utilities.positive, dtype=self.input_type)
 
-    @gpflow.decors.name_scope()
     def K(self, X, X2=None):
         # Concatenate the covariance between X and X2 and their respective
         # variances. Only 1 variance is needed if X2 is None.
@@ -54,7 +53,6 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
                 tf.reshape(tf.square(X), [N] + self.input_shape),
                 tf.reshape(X[:, None, :] * X, [N*N] + self.input_shape)]
 
-            @gpflow.decors.name_scope("apply_recurse_kern_X_X")
             def apply_recurse_kern(var_a_all, concat_outputs=True):
                 var_a_1 = var_a_all[:N]
                 var_a_cross = var_a_all[N:]
@@ -72,7 +70,6 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
                 tf.reshape(X[:, None, :] * X2, [N*N2] + self.input_shape)]
             cross_start = N + N2
 
-            @gpflow.decors.name_scope("apply_recurse_kern_X_X2")
             def apply_recurse_kern(var_a_all, concat_outputs=True):
                 var_a_1 = var_a_all[:N]
                 var_a_2 = var_a_all[N:cross_start]
@@ -103,7 +100,6 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
             return tf.cast(result, gpflow.default_float(), name="cast_result")
         return result
 
-    @gpflow.decors.name_scope()
     def Kdiag(self, X):
         if X.dtype != self.input_type:
             raise TypeError("Input dtype is wrong: {} is not {}"
@@ -136,7 +132,6 @@ class DeepKernelTesting(DeepKernelBase):
     """
     Reimplement original DeepKernel to test ResNet
     """
-    @gpflow.decors.name_scope()
     def headless_network(self, inputs, apply_recurse_kern):
         in_chans = int(inputs.shape[self.data_format.index("C")])
         W_init = tf.fill([self.kernel_size, self.kernel_size, in_chans, 1],
