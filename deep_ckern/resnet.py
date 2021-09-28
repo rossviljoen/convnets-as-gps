@@ -36,6 +36,7 @@ def conv2d_fixed_padding(inputs, var, kernel_size, strides,
     """Strided 2-D convolution with explicit padding."""
     # The padding is consistent and is based only on `kernel_size`, not on the
     # dimensions of `inputs` (as opposed to using `tf.layers.conv2d` alone).
+    print(name, strides) # TODO: remove
     if strides > 1:
         inputs = fixed_padding(inputs, kernel_size, data_format)
     chan_idx = data_format.index("C")
@@ -49,9 +50,11 @@ def conv2d_fixed_padding(inputs, var, kernel_size, strides,
         strides_shape = [1, 1, strides, strides]
     else:
         strides_shape = [1, strides, strides, 1]
+    padding=('SAME' if strides == 1 else 'VALID')
+    print(inputs)
     return tf.nn.conv2d(
-        input=inputs, filter=W, strides=strides_shape,
-        padding=('SAME' if strides == 1 else 'VALID'),
+        inputs, W, strides_shape,
+        padding,
         data_format=data_format)
 
 
@@ -71,15 +74,15 @@ class ResnetKernel(DeepKernelBase):
             name='initial_conv')
 
         for i, num_blocks in enumerate(self.block_sizes):
-            with tf.name_scope("block_layer_{}".format(i+1)):
-                # Only the first block per block_layer uses strides
-                # and strides
-                inputs = self.block_v2(inputs, True, self.block_strides[i],
-                                       apply_recurse_kern)
-                print("First layer of block {}:".format(i), inputs)
-                for j in range(1, num_blocks):
-                    inputs = self.block_v2(inputs, False, 1, apply_recurse_kern)
-                    print("{}th layer of block {}:".format(j, i), inputs)
+            # with tf.name_scope("block_layer_{}".format(i+1)):
+            # Only the first block per block_layer uses strides
+            # and strides
+            inputs = self.block_v2(inputs, True, self.block_strides[i],
+                                   apply_recurse_kern)
+            print("First layer of block {}:".format(i), inputs)
+            for j in range(1, num_blocks):
+                inputs = self.block_v2(inputs, False, 1, apply_recurse_kern)
+                print("{}th layer of block {}:".format(j, i), inputs)
         # Dense layer
         inputs = tf.reduce_mean(inputs, axis=(1, 2, 3))
         return self.var_bias + self.var_weight * inputs
@@ -94,7 +97,6 @@ class ResnetKernel(DeepKernelBase):
                 inputs=inputs, var=self.var_weight, kernel_size=1,
                 strides=strides, data_format=self.data_format,
                 name='projection_shortcut')
-
         inputs = conv2d_fixed_padding(
             inputs=inputs, var=self.var_weight, kernel_size=3, strides=strides,
             data_format=self.data_format)

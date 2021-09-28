@@ -36,9 +36,9 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
         self.input_type = input_type
 
         self.var_weight = gpflow.Parameter(
-            var_weight, gpflow.utilities.positive, dtype=self.input_type)
+            var_weight, transform=gpflow.utilities.positive(), dtype=self.input_type)
         self.var_bias = gpflow.Parameter(
-            var_bias, gpflow.utilities.positive, dtype=self.input_type)
+            var_bias, transform=gpflow.utilities.positive(), dtype=self.input_type)
 
     def K(self, X, X2=None):
         # Concatenate the covariance between X and X2 and their respective
@@ -56,7 +56,7 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
             def apply_recurse_kern(var_a_all, concat_outputs=True):
                 var_a_1 = var_a_all[:N]
                 var_a_cross = var_a_all[N:]
-                vz = [self.recurse_kern.Kdiag(var_a_1),
+                vz = [self.recurse_kern.K_diag(var_a_1),
                       self.recurse_kern.K(var_a_cross, var_a_1, None)]
                 if concat_outputs:
                     return tf.concat(vz, axis=0)
@@ -74,8 +74,8 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
                 var_a_1 = var_a_all[:N]
                 var_a_2 = var_a_all[N:cross_start]
                 var_a_cross = var_a_all[cross_start:]
-                vz = [self.recurse_kern.Kdiag(var_a_1),
-                      self.recurse_kern.Kdiag(var_a_2),
+                vz = [self.recurse_kern.K_diag(var_a_1),
+                      self.recurse_kern.K_diag(var_a_2),
                       self.recurse_kern.K(var_a_cross, var_a_1, var_a_2)]
                 if concat_outputs:
                     return tf.concat(vz, axis=0)
@@ -100,15 +100,15 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
             return tf.cast(result, gpflow.default_float(), name="cast_result")
         return result
 
-    def Kdiag(self, X):
+    def K_diag(self, X):
         if X.dtype != self.input_type:
             raise TypeError("Input dtype is wrong: {} is not {}"
                             .format(X.dtype, self.input_type))
         inputs = tf.reshape(tf.square(X), [-1] + self.input_shape)
         if len(self.block_sizes) > 0:
-            inputs = self.headless_network(inputs, self.recurse_kern.Kdiag)
+            inputs = self.headless_network(inputs, self.recurse_kern.K_diag)
             # Last dense layer
-            inputs = self.recurse_kern.Kdiag(inputs)
+            inputs = self.recurse_kern.K_diag(inputs)
 
         all_except_first = np.arange(1, len(inputs.shape))
         var_z_last = tf.reduce_mean(inputs, axis=all_except_first)
@@ -123,7 +123,7 @@ class DeepKernelBase(gpflow.kernels.Kernel, metaclass=abc.ABCMeta):
     def headless_network(self, inputs, apply_recurse_kern):
         """
         Apply the network that this kernel defines, except the last dense layer.
-        The last dense layer is different for K and Kdiag.
+        The last dense layer is different for K and K_diag.
         """
         raise NotImplementedError
 
